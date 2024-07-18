@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Tableau and ChatGPT Integration</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+      }
+
+      .dashboard-container {
+        width: 100%;
+        height: 850px;
+        margin-bottom: 20px;
+      }
+
+      .chatbox {
+        height: 300px;
+        overflow: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+      }
+
+      .message {
+        margin-bottom: 10px;
+      }
+
+      .user {
+        color: black;
+      }
+
+      .bot {
+        color: #619EFF;
+      }
+
+      button {
+          padding: 10px 20px;
+          font-size: 16px;
+          background-color: #619EFF;
+          color: white;
+          border: none;
+          cursor: pointer;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+      }
+    </style>
+    <script type="text/javascript" src="https://public.tableau.com/javascripts/api/tableau-2.8.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <div class="dashboard-container" id="tableauViz"></div>
+    <div class="chatbox" id="chatbox"></div>
+    <input type="text" id="message" placeholder="Nhập nội dung vào đây...">
+    <button id="send">Gửi</button>
+    <script>
+      var viz;
+      window.onload = function() {
+        var placeholderDiv = document.getElementById('tableauViz');
+        var url = "https://public.tableau.com/views/Final_17200988072680/Dashboard1";
+        var options = {
+          width: placeholderDiv.offsetWidth,
+          height: placeholderDiv.offsetHeight,
+          hideTabs: true,
+          hideToolbar: true
+        };
+        viz = new tableau.Viz(placeholderDiv, url, options);
+      };
+
+      var chatbox = document.getElementById("chatbox");
+      var message = document.getElementById("message");
+      var send = document.getElementById("send");
+
+      send.addEventListener("click", function() {
+        sendMessage();
+      });
+    
+      function sendMessage() {
+        var userMessage = message.value;
+        var userDiv = document.createElement("div");
+        userDiv.className = "message user";
+        userDiv.innerHTML = "<strong>Bạn: </strong>" + userMessage;
+        chatbox.appendChild(userDiv);
+  
+        message.value = "";
+
+        html2canvas(document.getElementById('tableauViz')).then(canvas => {
+          var base64data = canvas.toDataURL("image/png");
+          sendToBackend(userMessage, base64data);
+        });
+      }
+    
+      function sendToBackend(userMessage, base64data) {
+        fetch("/get_response", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            screenshot: base64data
+          })
+        }).then(function(response) {
+          return response.text();
+        }).then(function(botMessage) {
+          var botDiv = document.createElement("div");
+          botDiv.className = "message bot";
+          botDiv.innerHTML = "<strong>Bot: </strong>" + marked.parse(botMessage);
+          chatbox.appendChild(botDiv);
+          chatbox.scrollTop = chatbox.scrollHeight;
+        });
+      }
+    </script>
+  </body>
+</html>
